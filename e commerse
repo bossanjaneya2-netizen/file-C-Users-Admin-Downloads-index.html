@@ -1,0 +1,203 @@
+<script>
+    // Sample data
+    let items = [];
+    let cart = [];
+    let orders = [];
+    let adminLoggedIn = false;
+    const adminId = 'ranganatha@';
+    const adminPassword = 'ranganatha@81';
+
+    // Navigation
+    document.querySelectorAll('nav a').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const target = e.target.getAttribute('href').substring(1);
+            document.querySelectorAll('.container').forEach(div => div.style.display = 'none');
+            document.getElementById(target).style.display = 'block';
+        });
+    });
+
+    // User Sign Up
+    document.getElementById('signup-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        alert('Signed up successfully!');
+        document.getElementById('login-signup').style.display = 'none';
+        document.getElementById('home').style.display = 'block';
+    });
+
+    // User Login
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        if (email && password) {
+            alert('Logged in successfully!');
+            document.getElementById('login-signup').style.display = 'none';
+            document.getElementById('home').style.display = 'block';
+        } else {
+            document.getElementById('reset-message').textContent = 'Invalid credentials. Please reset.';
+        }
+    });
+
+    // Forget Password
+    document.getElementById('forget-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        alert('Password reset successfully!');
+        document.getElementById('forget-password').style.display = 'none';
+        document.getElementById('login-signup').style.display = 'block';
+    });
+
+    // Admin Login
+    document.getElementById('admin-login').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('admin-id').value;
+        const pass = document.getElementById('admin-password').value;
+        if (id === adminId && pass === adminPassword) {
+            adminLoggedIn = true;
+            document.getElementById('admin-panel').style.display = 'block';
+            alert('Admin logged in!');
+        } else {
+            alert('Invalid admin credentials.');
+        }
+    });
+
+    // Admin Forget Password
+    document.getElementById('admin-forget-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        alert('Admin password reset successfully!');
+        document.getElementById('admin-forget').style.display = 'none';
+        document.getElementById('admin').style.display = 'block';
+    });
+
+    // Add Item
+    document.getElementById('add-item-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!adminLoggedIn) return;
+        const name = document.getElementById('item-name').value;
+        const price = document.getElementById('item-price').value;
+        const photo = document.getElementById('item-photo').value;
+        items.push({ name, price, photo });
+        updateItems();
+        updateAdminItems();
+        document.getElementById('add-item-form').reset();
+    });
+
+    function updateItems() {
+        const itemsDiv = document.getElementById('items');
+        itemsDiv.innerHTML = '';
+        items.forEach((item, index) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'item';
+            itemDiv.innerHTML = `
+                <img src="${item.photo}" alt="${item.name}">
+                <h3>${item.name}</h3>
+                <p>₹${item.price}</p>
+                <button onclick="addToCart(${index})">Add to Cart</button>
+            `;
+            itemsDiv.appendChild(itemDiv);
+        });
+    }
+
+    function updateAdminItems() {
+        const adminItems = document.getElementById('admin-items');
+        adminItems.innerHTML = '';
+        items.forEach((item, index) => {
+            const li = document.createElement('li');
+            li.innerHTML = `${item.name} - ₹${item.price} <button onclick="deleteItem(${index})">Delete</button>`;
+            adminItems.appendChild(li);
+        });
+    }
+
+    function deleteItem(index) {
+        items.splice(index, 1);
+        updateItems();
+        updateAdminItems();
+    }
+
+    function addToCart(index) {
+        cart.push(items[index]);
+        updateCart();
+    }
+
+    function updateCart() {
+        const cartItems = document.getElementById('cart-items');
+        cartItems.innerHTML = '';
+        let total = 0;
+        cart.forEach((item, index) => {
+            const li = document.createElement('li');
+            li.innerHTML = `${item.name} - ₹${item.price} <button onclick="removeFromCart(${index})">Remove</button>`;
+            cartItems.appendChild(li);
+            total += parseFloat(item.price);
+        });
+        document.getElementById('total').textContent = total;
+        if (cart.length > 0) {
+            document.getElementById('checkout-btn').style.display = 'block';
+        }
+    }
+
+    function removeFromCart(index) {
+        cart.splice(index, 1);
+        updateCart();
+    }
+
+    document.getElementById('checkout-btn').addEventListener('click', () => {
+        if (cart.length >= 1) {
+            document.getElementById('payment-options').style.display = 'block';
+        }
+    });
+
+    document.getElementById('place-order').addEventListener('click', () => {
+        const payment = document.getElementById('payment-mode').value;
+        orders.push({ items: [...cart], payment });
+        updateAdminOrders();
+        generateInvoice(cart, payment);
+        cart = [];
+        updateCart();
+        document.getElementById('payment-options').style.display = 'none';
+        alert('Order placed! Invoice downloaded.');
+    });
+
+    function updateAdminOrders() {
+        const adminOrders = document.getElementById('admin-orders');
+        adminOrders.innerHTML = '';
+        orders.forEach((order, index) => {
+            const li = document.createElement('li');
+            li.innerHTML = `Order ${index + 1}: ${order.items.map(i => i.name).join(', ')} - ${order.payment} 
+                <button onclick="acceptOrder(${index})">Accept</button> 
+                <button onclick="rejectOrder(${index})">Reject</button>`;
+            adminOrders.appendChild(li);
+        });
+    }
+
+    function acceptOrder(index) {
+        orders.splice(index, 1);
+        updateAdminOrders();
+        alert('Order accepted.');
+    }
+
+    function rejectOrder(index) {
+        orders.splice(index, 1);
+        updateAdminOrders();
+        alert('Order rejected.');
+    }
+
+    function generateInvoice(cartItems, payment) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFontSize(20);
+        doc.text('Invoice - Ranganatha Shopping Mall', 20, 20);
+        doc.setFontSize(12);
+        doc.text('Address: Machohalli 4th Cross Mathru Nagar', 20, 30);
+        doc.text('Contact: 8217395153', 20, 40);
+        let y = 60;
+        cartItems.forEach(item => {
+            doc.text(`${item.name} - ₹${item.price}`, 20, y);
+            y += 10;
+        });
+        doc.text(`Payment: ${payment}`, 20, y);
+        doc.save('invoice.pdf');
+    }
+
+    // Initial load
+    updateItems();
+</script>
